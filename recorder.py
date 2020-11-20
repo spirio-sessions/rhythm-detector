@@ -1,4 +1,5 @@
 from pyaudio import PyAudio, paInt16
+from numpy import empty
 
 class Recorder:
     
@@ -9,7 +10,7 @@ class Recorder:
         self.chunk_size = int(chunk_length * sample_rate)
         self.pa = PyAudio()
         self.enable_logging = enable_logging
-        self.handle = lambda : print('no callback specified ...') if enable_logging else None
+        self.handle = lambda _: print('no callback specified ...') if enable_logging else None
 
     def log(self):
         if self.enable_logging:
@@ -19,24 +20,32 @@ class Recorder:
         self.handle = callback
         return self
 
+    def read_chunk(self, unit_size, chunk):
+        if len(chunk) % unit_size != 0:
+            raise ValueError(f'unit size {unit_size} and payload length {len(chunk)} are incompatible')
+        
+        frame_length = len(chunk) // unit_size
+        frames = empty((frame_length,))
+        for i in range(0, len(chunk), unit_size):
+            frame = int.from_bytes(chunk[i:i+unit_size], 'little')
+            frames[i // unit_size] = frame
+        return frames
+
     def run(self):
         try:
             self.stream = self.pa.open(
                 rate=self.sample_rate, 
-                channels=self.channels, 
+                channels=self.channels,
                 format=paInt16,
                 input=True,
                 frames_per_buffer=1024)
 
             while True:
-                chunk = self.stream.read(self.chunk_size)
+                raw_chunk = self.stream.read(self.chunk_size, False)
+                chunk = self.read_chunk(2, raw_chunk)
                 self.log()
                 self.handle(chunk)
         except KeyboardInterrupt:
-            pass
-        except Exception as e:
-            print(e)
-
-        self.stream.stop_stream()
-        self.stream.close()
-        self.pa.terminate()
+            self.stream.stop_stream()
+            self.stream.close()
+            self.pa.terminate()
