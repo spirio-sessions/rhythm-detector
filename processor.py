@@ -51,11 +51,6 @@ class Processor:
         dominant_flanks = list(map(lambda f: 1 if f > avg_rising else 0, flanks))
         return dominant_flanks
 
-    def detect(self, chunk):
-        smooth_chunk = self.smooth(chunk)
-        flanks = self.flanks(smooth_chunk)
-        return flanks
-
     def generate_osc(self, beats):
         timestamps = []
         for i in range(len(beats)):
