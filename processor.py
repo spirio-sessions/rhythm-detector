@@ -83,7 +83,3 @@ class Processor:
         f.write(path + ' ' + str(beats))
         f.close()
         # self.osc_client.send_message(path, beats)
-
-chunk = [abs(2000 * sin(x * 8*3.1415/88200)) for x in range(88200)]
-p = Processor(('127.0.0.1', 5050), 2, 44100, 2)
-p.process(chunk)
