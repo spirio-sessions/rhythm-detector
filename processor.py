@@ -1,8 +1,7 @@
-from librosa.beat import plp, beat_track
 from pythonosc.udp_client import SimpleUDPClient
 
 from time import sleep
-from numpy import concatenate, abs, mean
+from numpy import concatenate, mean
 from threading import Thread
 
 def tick(t):
