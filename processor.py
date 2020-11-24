@@ -26,14 +26,19 @@ class Processor:
         self.chunk_length = chunk_length
         self.chunk_size = sample_rate * chunk_length
 
-    def window(self, chunk, window_lengt=0.05): # window length in seconds
-        window_size = int(self.sample_rate * window_lengt)
-        window_count = int(self.chunk_size) // window_size
-        windowed = []
-        for w in range(window_count):
-            window = chunk[w*window_size : (w+1)*window_size]
-            windowed.append(mean(window))
-        return windowed
+    def smooth(self, chunk, window_length=0.05): # window length in seconds
+        window_size = int(self.sample_rate * window_length)
+        half_window_size = window_size // 2
+        smooth_chunk = [None] * len(chunk)
+
+        for i in range(half_window_size):
+            smooth_chunk[i] = mean(chunk[:i + (half_window_size)])
+            smooth_chunk[-(i + 1)] = mean(chunk[-(i + 1 + (half_window_size))])
+
+        for i in range(half_window_size, len(chunk) - half_window_size):
+            smooth_chunk[i] = mean(chunk[i-half_window_size : i+half_window_size])
+
+        return smooth_chunk
 
     def flanks(self, chunk):
         flanks = [0]
@@ -41,28 +46,31 @@ class Processor:
             flanks.append(chunk[i] - chunk[i-1])
         return flanks
 
-    def detect(self, chunk):
-        # chunk_size = int(self.sample_rate * self.chunk_length)
-        # hop = int((4/7)*chunk_size)
-        # win = int((3/7)*chunk_size)
-        # beats = plp(chunk, sr=self.sample_rate) #hop_length=hop, win_length=win)
+    def dominant(self, flanks):
+        avg_rising = mean(list(filter(lambda f: f > 0, flanks)))
+        dominant_flanks = list(map(lambda f: 1 if f > avg_rising else 0, flanks))
+        return dominant_flanks
 
-        #_, beats = beat_track(chunk, sr=self.sample_rate, units='time')
-        windowed = self.window(chunk)
-        beats = self.flanks(windowed)
-        return beats
+    def detect(self, chunk):
+        smooth_chunk = self.smooth(chunk)
+        flanks = self.flanks(smooth_chunk)
+        return flanks
 
     def generate_osc(self, beats):
-        return ('/generate/pulse', beats)
+        timestamps = []
+        for i in range(len(beats)):
+            if beats[i] == 1:
+                timestamp = i / self.sample_rate
+                timestamps.append(timestamp)
+
+        return ('/generate/pulse', timestamps)
 
     def process(self, chunk):
-        beats = self.detect(chunk)
-        beats = list(map(str, beats))
-        output = ' '.join(beats)
-        file = open('./log', 'w')
-        file.write(output)
-        file.close()
-        # path, value = self.generate_osc(beats)
-        # Thread(target=ticks(beats)).start()
-        # print(beats)
-        # self.osc_client.send_message(path, value)
+        smooth_chunk = self.smooth(chunk, 1/16) # scale to 1/32 beat at 120 bpm
+        flanks = self.flanks(smooth_chunk)
+        dominant_flanks = self.dominant(flanks)
+        path, beats = self.generate_osc(dominant_flanks)
+
+        Thread(target=ticks(beats)).start()
+        print(path, beats)
+        # self.osc_client.send_message(path, beats)
