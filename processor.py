@@ -45,9 +45,9 @@ class Processor:
             flanks.append(chunk[i] - chunk[i-1])
         return flanks
 
-    def dominant(self, flanks):
+    def dominant(self, flanks, scale=0.5):
         avg_rising = mean(list(filter(lambda f: f > 0, flanks)))
-        dominant_flanks = list(map(lambda f: 1 if f > avg_rising else 0, flanks))
+        dominant_flanks = list(map(lambda f: 1 if f > scale * avg_rising else 0, flanks))
         return dominant_flanks
 
     def generate_osc(self, beats):
