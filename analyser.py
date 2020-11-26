@@ -1,27 +1,10 @@
+from numpy import mean
+
 from pythonosc.udp_client import SimpleUDPClient
 
-from time import sleep
-from numpy import concatenate, mean, sin, abs
-from matplotlib import pyplot
-from threading import Thread
+class Analyser:
 
-def tick(t):
-    sleep(t)
-    print('\a')
-
-def ticks(ts):
-    ts = concatenate(([0.0], ts))
-    def do_ticks():
-        for i in range(len(ts) - 1):
-            tick(ts[i+1] - ts[i])
-    return do_ticks
-
-class Processor:
-
-    def __init__(self, target, channels, sample_rate, chunk_length):
-        ip, port = target
-        self.osc_client = SimpleUDPClient(ip, int(port))
-        self.channels = channels
+    def __init__(self, sample_rate, chunk_length):
         self.sample_rate = sample_rate
         self.chunk_length = chunk_length
         self.chunk_size = sample_rate * chunk_length
@@ -62,24 +45,16 @@ class Processor:
         dominant_flanks = list(map(lambda f: 1 if f > scale * avg_rising else 0, flanks))
         return dominant_flanks
 
-    def generate_osc(self, beats):
-        timestamps = []
-        for i in range(len(beats)):
-            if beats[i] == 1:
-                timestamp = i * (self.chunk_length / len(beats))
-                timestamps.append(timestamp)
-
-        return ('/generate/pulse', timestamps)
-
-    def process(self, chunk):
+    def analyse(self, chunk):
         smooth_chunk = self.smooth(chunk, 1/16) # scale to 1/32 beat at 120 bpm
         windowed_chunk = self.window(smooth_chunk)
         flanks = self.flanks(windowed_chunk)
         dominant_flanks = self.dominant(flanks)
-        path, beats = self.generate_osc(dominant_flanks)
+        
+        beats = []
+        for i in range(len(dominant_flanks)):
+            if dominant_flanks[i] == 1:
+                timestamp = i * (self.chunk_length / len(dominant_flanks))
+                beats.append(timestamp)
 
-        Thread(target=ticks(beats)).start()
-        f = open('./out', mode='w', encoding='utf-8')
-        f.write(path + ' ' + str(beats))
-        f.close()
-        # self.osc_client.send_message(path, beats)
+        return beats

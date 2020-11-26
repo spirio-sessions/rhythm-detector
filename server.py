@@ -8,6 +8,7 @@ ctx = {
 class Server:
 
     class AudioStreamHandler(BaseHTTPRequestHandler):
+        
         def read_payload(self, unit_size, payload):
             if len(payload) % unit_size != 0:
                 raise ValueError(f'unit size {unit_size} and payload length {len(payload)} are incompatible')
@@ -18,7 +19,6 @@ class Server:
                 frame = float(payload[i:i+unit_size])
                 frames[i // unit_size] = frame
             return frames
-
 
         def do_POST(self):
             chunk_size = int(self.headers['Content-Length'])
@@ -49,3 +49,4 @@ class Server:
         except Exception as e:
             print(e)
         print('stopping server')
+        self.httpd.shutdown()

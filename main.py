@@ -1,12 +1,31 @@
 import argparse
 import re
+
+from osc_sender import OscSender
+from analyser import Analyser
 from recorder import Recorder
 from server import Server
-from processor import Processor
+
+# make a ticking sound on the host machine
+
+# def tick(t):
+#     sleep(t)
+#     print('\a')
+
+# def ticks(ts):
+#     ts = concatenate(([0.0], ts))
+#     def do_ticks():
+#         for i in range(len(ts) - 1):
+#             tick(ts[i+1] - ts[i])
+#     return do_ticks
 
 def validate_connection_info(target_string):
     match = re.match(r'(\d+\.\d+\.\d+\.\d+):(\d+)', target_string)
-    return match.groups() if match != None else False
+    if match != None:
+        ip, port = match.groups()
+        return (ip, int(port))
+    else:
+        raise ValueError("specification of target connection malformed; expected 'IPV4:PORT' but instead got %s" % target_string)
 
 def main():
     arg_parser = argparse.ArgumentParser()
@@ -23,24 +42,24 @@ def main():
     args = arg_parser.parse_args()
     
     target_connection = validate_connection_info(args.target)
-    if not target_connection:
-        raise ValueError("specification of target connection malformed; expected 'IPV4:PORT' but instead got %s" % args.target)
+    osc_sender = OscSender(target_connection)
+    analyser = Analyser(args.samplerate, args.chunklength)
     
     server_connection = False
     if args.server:
         server_connection = validate_connection_info(args.server)
-        if not server_connection:
-            raise ValueError("specification of server connection malformed; expected 'IPV4:PORT' but instead got %s" % args.server)
 
-    processor = Processor(target_connection, args.channels, args.samplerate, args.chunklength)
+    def handle(chunk):
+            beats = analyser.analyse(chunk)
+            osc_sender.send(beats)
 
     if server_connection:
         Server(server_connection) \
-            .with_handle(processor.process) \
+            .with_handle(handle) \
             .run()
     else:
         Recorder(args.channels, args.samplerate, args.chunklength) \
-            .with_handle(processor.process) \
+            .with_handle(handle) \
             .run()
 
 if __name__ == '__main__':

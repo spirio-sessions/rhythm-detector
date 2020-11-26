@@ -1,5 +1,5 @@
-from pyaudio import PyAudio, paInt16
 from numpy import empty
+from pyaudio import PyAudio, paInt16
 
 class Recorder:
     
@@ -45,6 +45,7 @@ class Recorder:
                 chunk = self.read_chunk(2, raw_chunk)
                 self.log()
                 self.handle(chunk)
+                
         except KeyboardInterrupt:
             self.stream.stop_stream()
             self.stream.close()
