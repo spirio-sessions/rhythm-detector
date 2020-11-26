@@ -25,7 +25,7 @@ class Analyser:
 
     def window(self, chunk, window_length=0.05): # window length in seconds
         window_size = int(self.sample_rate * window_length)
-        window_count = self.chunk_size // window_size
+        window_count = int(self.chunk_size // window_size)
         windowed_chunk = []
         
         for w in range(window_count):
