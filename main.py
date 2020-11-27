@@ -42,7 +42,7 @@ def main():
     args = arg_parser.parse_args()
     
     target_connection = validate_connection_info(args.target)
-    osc_sender = OscSender(target_connection)
+    # osc_sender = OscSender(target_connection)
     analyser = Analyser(args.samplerate, args.chunklength)
     
     server_connection = False
@@ -51,7 +51,8 @@ def main():
 
     def handle(chunk):
             beats = analyser.analyse(chunk)
-            osc_sender.send(beats)
+            print(beats)
+            # osc_sender.send(beats)
 
     if server_connection:
         Server(server_connection) \
