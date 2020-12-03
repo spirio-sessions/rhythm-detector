@@ -1,5 +1,6 @@
 from numpy import empty
 from pyaudio import PyAudio, paInt16
+import wave
 
 class Recorder:
     
@@ -20,7 +21,9 @@ class Recorder:
         self.handle = callback
         return self
 
-    def read_chunk(self, unit_size, chunk):
+    def read_chunk(self, unit_size, chunk): # unit size in bytes
+        unit_size *= 2 # pyaudio actually handles audio in 4bit blocks, hence we have to double our unit
+
         if len(chunk) % unit_size != 0:
             raise ValueError(f'unit size {unit_size} and payload length {len(chunk)} are incompatible')
         
@@ -30,6 +33,21 @@ class Recorder:
             frame = int.from_bytes(chunk[i:i+unit_size], 'little')
             frames[i // unit_size] = frame
         return frames
+
+    def record_chunk(self):
+        chunk = self.pa.open(
+            rate=self.sample_rate,
+            channels=self.channels,
+            format=paInt16,
+            input=True
+        ).read(self.chunk_size, False)
+        
+        wf = wave.open('./recording.wav', 'wb')
+        wf.setnchannels(self.channels)
+        wf.setsampwidth(self.pa.get_sample_size(paInt16))
+        wf.setframerate(self.sample_rate)
+        wf.writeframes(chunk)
+        wf.close()
 
     def run(self):
         try:

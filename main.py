@@ -30,7 +30,7 @@ def validate_connection_info(target_string):
 def main():
     arg_parser = argparse.ArgumentParser()
 
-    arg_parser.add_argument('--target', help='the target generated osc messages should be published to in the format IPV4:PORT, e.g. 127.0.0.1:5050', required=True)
+    # arg_parser.add_argument('--target', help='the target generated osc messages should be published to in the format IPV4:PORT, e.g. 127.0.0.1:5050', required=True)
 
     server = arg_parser.add_argument_group('mode')
     server.add_argument('--server', help='run the application as web server at IPV4:PORT, e.g. 127.0.0.1:5000', default=False)
@@ -41,7 +41,7 @@ def main():
 
     args = arg_parser.parse_args()
     
-    target_connection = validate_connection_info(args.target)
+    # target_connection = validate_connection_info(args.target)
     # osc_sender = OscSender(target_connection)
     analyser = Analyser(args.samplerate, args.chunklength)
     
