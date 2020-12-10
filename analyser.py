@@ -4,14 +4,18 @@ from pythonosc.udp_client import SimpleUDPClient
 
 class Analyser:
 
-    def __init__(self, sample_rate, chunk_length):
+    def __init__(self, sample_rate, chunk_length, window_length=0.05, dominant_scale=1.0, strength_window_length=0.05):
         self.sample_rate = sample_rate
         self.chunk_length = chunk_length
-        self.chunk_size = sample_rate * chunk_length
+        self.chunk_size = int(sample_rate * chunk_length)
+        self.window_length = window_length
+        self.window_size = int(sample_rate * window_length)
+        self.dominant_scale = dominant_scale
+        self.strength_window_length = strength_window_length
+        self.strength_window_size = int((sample_rate * strength_window_length) / self.window_size)
 
-    def smooth(self, chunk, window_length=0.05): # window length in seconds
-        window_size = int(self.sample_rate * window_length)
-        half_window_size = window_size // 2
+    def smooth(self, chunk):
+        half_window_size = self.window_size // 2
         smooth_chunk = [None] * len(chunk)
 
         for i in range(half_window_size):
@@ -23,13 +27,12 @@ class Analyser:
 
         return smooth_chunk
 
-    def window(self, chunk, window_length=0.1): # window length in seconds
-        window_size = int(self.sample_rate * window_length)
-        window_count = int(self.chunk_size // window_size)
+    def window(self, chunk):
+        window_count = int(self.chunk_size // self.window_size)
         windowed_chunk = []
         
         for w in range(window_count):
-            windowed = mean(chunk[w*window_size : (w+1)*window_size])
+            windowed = mean(chunk[w*self.window_size : (w+1)*self.window_size])
             windowed_chunk.append(windowed)
         
         return windowed_chunk
@@ -40,16 +43,26 @@ class Analyser:
             flanks.append(chunk[i] - chunk[i-1])
         return flanks
 
-    def dominant(self, flanks, scale=1.0):
+    def dominant(self, flanks):
         avg_rising = mean(list(filter(lambda f: f > 0, flanks)))
-        dominant_flanks = list(map(lambda f: 1 if f > scale * avg_rising else 0, flanks))
+        dominant_flanks = list(map(lambda f: 1 if f > self.dominant_scale * avg_rising else 0, flanks))
         return dominant_flanks
 
+    def strength(self, windowed, dominants):
+        strengths = []
+
+        for i in range(len(dominants)):
+            if dominants[i] == 1 and i >= self.strength_window_size:
+                strengths.append(windowed[i] / mean(windowed[i-self.strength_window_size:i]))
+        return strengths
+
     def analyse(self, chunk):
-        smooth_chunk = self.smooth(chunk, 1/16) # scale to 1/32 beat at 120 bpm
+        smooth_chunk = self.smooth(chunk)
         windowed_chunk = self.window(smooth_chunk)
         flanks = self.flanks(windowed_chunk)
         dominant_flanks = self.dominant(flanks)
+
+        strengths = self.strength(windowed_chunk, dominant_flanks)
         
         beats = []
         for i in range(len(dominant_flanks)):
@@ -57,4 +70,4 @@ class Analyser:
                 timestamp = i * (self.chunk_length / len(dominant_flanks))
                 beats.append(timestamp)
 
-        return beats
+        return (beats, strengths)

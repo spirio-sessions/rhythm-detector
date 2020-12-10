@@ -1,5 +1,6 @@
 from numpy import empty
 from pyaudio import PyAudio, paInt16
+from threading import Thread
 import wave
 
 class Recorder:
@@ -58,13 +59,15 @@ class Recorder:
                 input=True,
                 frames_per_buffer=1024)
 
+            print('beat detector is recording..')
+
             while True:
                 raw_chunk = self.stream.read(self.chunk_size, False)
                 chunk = self.read_chunk(2, raw_chunk)
-                self.log()
-                self.handle(chunk)
+                Thread(target=self.handle, args=(chunk,)).start()
                 
         except KeyboardInterrupt:
+            print('beat detector stops recording - good bye')
             self.stream.stop_stream()
             self.stream.close()
             self.pa.terminate()

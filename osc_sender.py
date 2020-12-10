@@ -1,4 +1,5 @@
 from pythonosc.udp_client import SimpleUDPClient
+from time import sleep
 
 class OscSender:
     
@@ -6,9 +7,13 @@ class OscSender:
         ip, port = target
         self.osc_client = SimpleUDPClient(ip, port)
 
-    def osc_message(self, beats):
-        return ('/pulse/generate', beats)
-
     def send(self, beats):
-        path, data = self.osc_message(beats)
-        self.osc_client.send_message(path, data)
+        path = '/pulse/beat'
+        data = None
+        last_timestamp = 0.0
+
+        for timestamp in beats:
+            delay = timestamp - last_timestamp
+            sleep(delay)
+            self.osc_client.send_message(path, data)
+            last_timestamp = timestamp
