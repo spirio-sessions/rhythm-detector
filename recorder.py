@@ -1,7 +1,10 @@
+import wave
+
 from numpy import empty
 from pyaudio import PyAudio, paInt16
 from threading import Thread
-import wave
+
+from util import read_chunk
 
 class Recorder:
     
@@ -21,19 +24,6 @@ class Recorder:
     def with_handle(self, callback):
         self.handle = callback
         return self
-
-    def read_chunk(self, unit_size, chunk): # unit size in bytes
-        unit_size *= 2 # pyaudio actually handles audio in 4bit blocks, hence we have to double our unit
-
-        if len(chunk) % unit_size != 0:
-            raise ValueError(f'unit size {unit_size} and payload length {len(chunk)} are incompatible')
-        
-        frame_length = len(chunk) // unit_size
-        frames = empty((frame_length,))
-        for i in range(0, len(chunk), unit_size):
-            frame = int.from_bytes(chunk[i:i+unit_size], 'little')
-            frames[i // unit_size] = frame
-        return frames
 
     def record_chunk(self):
         chunk = self.pa.open(
@@ -63,7 +53,8 @@ class Recorder:
 
             while True:
                 raw_chunk = self.stream.read(self.chunk_size, False)
-                chunk = self.read_chunk(2, raw_chunk)
+                # format is Int16 but since PyAudio internally uses half-bytes as blocks, we need to double the unit_size
+                chunk = read_chunk(4, raw_chunk)
                 Thread(target=self.handle, args=(chunk,)).start()
                 
         except KeyboardInterrupt:

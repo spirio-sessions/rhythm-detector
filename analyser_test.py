@@ -1,10 +1,14 @@
 #%%
 import wave
-from recorder import Recorder
-from pyaudio import paInt16
-from analyser import Analyser
 from matplotlib import pyplot
 
+from util import read_chunk
+from recorder import Recorder
+from loader import Loader
+from pyaudio import paInt16
+from analyser import Analyser
+
+#%%
 sample_rate = 44100
 chunk_length = 2 #seconds
 chunk_size = sample_rate * chunk_length
@@ -15,7 +19,7 @@ wf = wave.open('./recording.wav', 'rb')
 chunk = wf.readframes(recorder.chunk_size)
 wf.close()
 
-chunk = recorder.read_chunk(2, chunk)
+chunk = read_chunk(2, chunk)
 
 analyser = Analyser(recorder.sample_rate, recorder.chunk_length, strength_window_length=0.1)
 
@@ -43,8 +47,16 @@ pyplot.figure()
 pyplot.plot(strengths)
 
 # %%
-from osc_sender import OscSender
+sample_rate = 44100
+chunk_length = 5.0 #seconds
 
-sender = OscSender(('127.0.0.1', 9998))
-sender.send([0.3, 0.8, 1.3, 1.8])
+loader = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_2.wav', chunk_length)
+analyser = Analyser(sample_rate, chunk_length)
+
+def callback(chunk):
+    smooth = analyser.smooth(chunk)
+    pyplot.figure()
+    pyplot.plot(smooth)
+
+loader.with_handle(callback).run()
 # %%
