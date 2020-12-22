@@ -18,9 +18,9 @@ class Analyser:
         half_window_size = self.window_size // 2
         smooth_chunk = [None] * len(chunk)
 
-        for i in range(half_window_size):
+        for i in range(half_window_size): # TODO: omit?
             smooth_chunk[i] = mean(chunk[:i + (half_window_size)])
-            smooth_chunk[-(i + 1)] = mean(chunk[-(i + 1 + (half_window_size))])
+            smooth_chunk[-(i + 1)] = mean(chunk[-(i + 1 + half_window_size)])
 
         for i in range(half_window_size, len(chunk) - half_window_size):
             smooth_chunk[i] = mean(chunk[i-half_window_size : i+half_window_size])

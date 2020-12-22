@@ -1,6 +1,7 @@
 #%%
 import wave
 from matplotlib import pyplot
+from numpy import empty, concatenate
 
 from util import read_chunk
 from recorder import Recorder
@@ -9,6 +10,9 @@ from pyaudio import paInt16
 from analyser import Analyser
 
 #%%
+
+# perform and plot all analyser steps
+
 sample_rate = 44100
 chunk_length = 2 #seconds
 chunk_size = sample_rate * chunk_length
@@ -47,16 +51,39 @@ pyplot.figure()
 pyplot.plot(strengths)
 
 # %%
+
+# analyse recording as block and plot beats over signal
+
 sample_rate = 44100
 chunk_length = 5.0 #seconds
 
 loader = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_2.wav', chunk_length)
+#loader = Loader('./recording.wav', chunk_length)
 analyser = Analyser(sample_rate, chunk_length)
 
-def callback(chunk):
-    smooth = analyser.smooth(chunk)
-    pyplot.figure()
-    pyplot.plot(smooth)
+def draw_lines(dominants):
+    for i in range(len(dominants)):
+        if dominants[i] == 1:
+            pyplot.axvline(x=i, color='r')
 
-loader.with_handle(callback).run()
+windowed_signal = empty(0)
+dominants_signal = []
+
+def callback(chunk):
+    global windowed_signal
+    global dominants_signal
+    smooth = analyser.smooth(chunk)
+    windowed = analyser.window(smooth)
+    windowed_signal = concatenate((windowed_signal, windowed))
+    dominants_signal += analyser.dominant(analyser.flanks(windowed))
+
+loader.with_handle(callback)
+loader.run()
+
+pyplot.figure(figsize=(30,4))
+pyplot.plot(windowed_signal)
+draw_lines(dominants_signal)
+pyplot.xlabel('time in 50ms steps')
+pyplot.ylabel('signal amplitude')
+pyplot.show()
 # %%
