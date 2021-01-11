@@ -59,7 +59,7 @@ def main():
                 .run()
 
         elif hasattr(args, 'load') and args.load:
-            Loader(args.load, args.chunk_length) \
+            Loader(args.load, analyser.chunk_length) \
                 .with_handle(handle) \
                 .run()
 
