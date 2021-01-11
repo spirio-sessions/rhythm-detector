@@ -34,7 +34,7 @@ class Loader:
 
             else: # read specified chunk
                 frame_rate = wf.getframerate()
-                chunk_size = int(self.chunk_length * frame_rate)
+                chunk_size = int(chunk_length * frame_rate)
                 unit_size  = wf.getsampwidth()
                 raw_chunk = wf.readframes(chunk_size)
                 return read_chunk(unit_size, raw_chunk)

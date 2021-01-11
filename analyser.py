@@ -1,73 +1,100 @@
-from numpy import mean
-
-from pythonosc.udp_client import SimpleUDPClient
+from configparser import ConfigParser
+from numpy import sin, pi, mean, median, argmax
 
 class Analyser:
 
-    def __init__(self, sample_rate, chunk_length, window_length=0.05, dominant_scale=1.0, strength_window_length=0.05):
+    def __init__(self, sample_rate=44100, chunk_length=5.0, window_length=0.25, hop_length=0.05, dominant_window_length=0.5, dominant_hop_length=0.25, dominant_scale=1.0):
         self.sample_rate = sample_rate
         self.chunk_length = chunk_length
         self.chunk_size = int(sample_rate * chunk_length)
         self.window_length = window_length
         self.window_size = int(sample_rate * window_length)
+        self.hop_length = hop_length
+        self.hop_size = int(sample_rate * hop_length)
+        self.dominant_window_length = dominant_window_length
+        self.dominant_window_size = int(sample_rate * dominant_window_length) // self.hop_size
+        self.dominant_hop_length = dominant_hop_length
+        self.dominant_hop_size = int(sample_rate * dominant_hop_length) // self.hop_size
         self.dominant_scale = dominant_scale
-        self.strength_window_length = strength_window_length
-        self.strength_window_size = int((sample_rate * strength_window_length) / self.window_size)
 
-    def smooth(self, chunk):
-        half_window_size = self.window_size // 2
-        smooth_chunk = [None] * len(chunk)
+    def with_config(self, config_path, profile=None):
+        cfg = ConfigParser()
+        cfg.read('analyser_config.ini')
 
-        for i in range(half_window_size): # TODO: omit?
-            smooth_chunk[i] = mean(chunk[:i + (half_window_size)])
-            smooth_chunk[-(i + 1)] = mean(chunk[-(i + 1 + half_window_size)])
-
-        for i in range(half_window_size, len(chunk) - half_window_size):
-            smooth_chunk[i] = mean(chunk[i-half_window_size : i+half_window_size])
-
-        return smooth_chunk
-
-    def window(self, chunk):
-        window_count = int(self.chunk_size // self.window_size)
-        windowed_chunk = []
+        if len(cfg.sections()) > 0:
+            if profile == None:
+                section = cfg[cfg.sections()[0]]
+            elif cfg.sections().__contains__(profile): 
+                section = cfg[profile]
+            else:
+                print('warning - analyser configuration could not be retrieved: no config profile named "%s" - continuing with defaults' % profile)
+                return self
+        else:
+            print('warning - analyser configuration could not be retrieved: no configuration found - continuing with defaults')
+            return self
         
-        for w in range(window_count):
-            windowed = mean(chunk[w*self.window_size : (w+1)*self.window_size])
-            windowed_chunk.append(windowed)
+        self.sample_rate, = section.getint('SampleRate'),
+        self.chunk_length, = section.getfloat('ChunkLength'),
+        self.window_length, = section.getfloat('WindowLength'),
+        self.hop_length, = section.getfloat('HopLength'),
+        self.dominant_window_length, = section.getfloat('DominantWindowLength'),
+        self.dominant_hop_length, = section.getfloat('DominantHopLength'),
+        self.dominant_scale = section.getfloat('DominantScale')
+        self.chunk_size = int(self.sample_rate * self.chunk_length)
+        self.window_size = int(self.sample_rate * self.window_length)
+        self.hop_size = int(self.sample_rate * self.hop_length)
+        self.dominant_window_size = int(self.sample_rate * self.dominant_window_length) // self.hop_size
+        self.dominant_hop_size = int(self.sample_rate * self.dominant_hop_length) // self.hop_size
+        return self
+
+    def detect(self, signal):
+        def detect_window(window):
+            detected = [0.0] * len(window)
+            for i in range(len(window)):
+                detected[i] = window[i]**2 * sin(pi*i/len(window))**2
+            return mean(detected)
+
+        detection_signal = [0.0] * (len(signal) // self.hop_size)
+
+        for i in range(self.hop_size, len(signal), self.hop_size):
+            if i-(self.window_size//2) > len(signal) or i+(self.window_size//2) > len(signal):
+                continue
+            detection_signal[(i//self.hop_size)-1] = detect_window(signal[i-(self.window_size//2) : i+(self.window_size//2)-1])
+
+        return detection_signal
+
+    def peak_pick(self, detection_signal):
+        peak_signal = []
+        for i in range(self.dominant_hop_size, len(detection_signal), self.dominant_hop_size):
+            window = detection_signal[i-(self.dominant_hop_size) : i]
+            window_median = median(window)
+            peak_signal += list(map(lambda x: x if x > self.dominant_scale*window_median else 0.0, window))
+
+        cleared_peak_signal = peak_signal.copy()
+        for i in range(self.dominant_hop_size, len(peak_signal), self.dominant_hop_size):
+            if i-(self.dominant_window_size//2) > len(peak_signal) or i+(self.dominant_window_size//2) > len(peak_signal):
+                continue
+            window = peak_signal[i-(self.dominant_window_size//2) : i+(self.dominant_window_size//2)]
+            if len(window) != 0:
+                i_max = argmax(window)
+                cleared_peak_window = [0.0] * len(window)
+                cleared_peak_window[i_max] = window[i_max]
+                cleared_peak_signal[i-(self.dominant_window_size//2) : i+(self.dominant_window_size//2)] = cleared_peak_window
         
-        return windowed_chunk
+        return cleared_peak_signal
 
-    def flanks(self, chunk):
-        flanks = [0]
-        for i in range(1, len(chunk)):
-            flanks.append(chunk[i] - chunk[i-1])
-        return flanks
+    def peaks_to_timestamps(self, signal):
+        timestamps = []
 
-    def dominant(self, flanks):
-        avg_rising = mean(list(filter(lambda f: f > 0, flanks)))
-        dominant_flanks = list(map(lambda f: 1 if f > self.dominant_scale * avg_rising else 0, flanks))
-        return dominant_flanks
-
-    def strength(self, windowed, dominants):
-        strengths = []
-
-        for i in range(len(dominants)):
-            if dominants[i] == 1 and i >= self.strength_window_size:
-                strengths.append(windowed[i] / mean(windowed[i-self.strength_window_size:i]))
-        return strengths
-
-    def analyse(self, chunk):
-        smooth_chunk = self.smooth(chunk)
-        windowed_chunk = self.window(smooth_chunk)
-        flanks = self.flanks(windowed_chunk)
-        dominant_flanks = self.dominant(flanks)
-
-        strengths = self.strength(windowed_chunk, dominant_flanks)
+        for i in range(len(signal)):
+            if signal[i] != 0.0:
+                timestamp = i * self.hop_length
+                amplitude = signal[i]
+                timestamps.append((timestamp, amplitude))
         
-        beats = []
-        for i in range(len(dominant_flanks)):
-            if dominant_flanks[i] == 1:
-                timestamp = i * (self.chunk_length / len(dominant_flanks))
-                beats.append(timestamp)
+        return timestamps
 
-        return (beats, strengths)
+    def analyse(self, signal):
+        detection_signal = self.detect(signal)
+        peak_signal = self.peak_pick(detection_signal)
+        return self.peaks_to_timestamps(peak_signal)

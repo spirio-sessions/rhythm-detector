@@ -12,7 +12,7 @@ class OscSender:
         data = None
         last_timestamp = 0.0
 
-        for timestamp in beats:
+        for timestamp, _ in beats:
             delay = timestamp - last_timestamp
             sleep(delay)
             self.osc_client.send_message(path, data)

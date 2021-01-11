@@ -8,7 +8,8 @@ from util import read_chunk
 
 class Recorder:
     
-    def __init__(self, channels=2, sample_rate=44100, chunk_length=2.0, enable_logging=True):
+    def __init__(self, device_number=0, channels=2, sample_rate=44100, chunk_length=2.0, enable_logging=True):
+        self.device_number = device_number
         self.channels = channels
         self.sample_rate = sample_rate
         self.chunk_length = chunk_length
@@ -27,6 +28,7 @@ class Recorder:
 
     def record_chunk(self):
         chunk = self.pa.open(
+            input_device_index=self.device_number,
             rate=self.sample_rate,
             channels=self.channels,
             format=paInt16,
@@ -43,6 +45,7 @@ class Recorder:
     def run(self):
         try:
             self.stream = self.pa.open(
+                input_device_index=self.device_number,
                 rate=self.sample_rate, 
                 channels=self.channels,
                 format=paInt16,

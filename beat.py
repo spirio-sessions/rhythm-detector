@@ -15,11 +15,6 @@ def validate_connection_info(target_string):
     else:
         raise ValueError("specification of target connection malformed; expected 'IPV4:PORT' but instead got %s" % target_string)
 
-def init_parameters(args):
-    args.samplerate = 44100
-    args.channels = 2
-    args.chunklength = 5.0
-
 def print_device_info():
     pa = PyAudio()
     device_count = pa.get_device_count()
@@ -34,35 +29,35 @@ def main():
     sub_parsers = arg_parser.add_subparsers()
 
     run_parser = sub_parsers.add_parser('detect')
-    run_parser.add_argument('--run', help='run bead detector', dest='run_detector', action='store_true', default=True)
+    run_parser.add_argument('--run', help='run beat detector', dest='run_detector', action='store_true', default=True)
     mode_group = run_parser.add_mutually_exclusive_group(required=True)
-    mode_group.add_argument('--record', type=int, help='record from audio input device')
+    mode_group.add_argument('--record', type=int, help='record from audio input device', dest='device_number')
     mode_group.add_argument('--load', help='load from local file specified by absolute os filepath')
+    run_parser.add_argument('--profile', help='name of analyser profile in analyser config', dest='analyser_profile', default=None)
     run_parser.add_argument('--target', help='the target generated osc messages should be published to in the format IPV4:PORT, e.g. 127.0.0.1:5050', required=True)
 
     deviceinfo_parser = sub_parsers.add_parser('deviceinfo')
     deviceinfo_parser.add_argument('--list', help='list all devices', dest='list_devices', action='store_true', default=True)
 
     args = arg_parser.parse_args()
-    init_parameters(args)
 
     if hasattr(args, 'run_detector') and args.run_detector:
 
         target_connection = validate_connection_info(args.target)
         osc_sender = OscSender(target_connection)
-        analyser = Analyser(args.samplerate, args.chunklength)
+        analyser = Analyser().with_config('analyser_config.ini', args.analyser_profile)
 
         def handle(chunk):
-                beats, _ = analyser.analyse(chunk)
-                osc_sender.send(beats)
+            beats = analyser.analyse(chunk)
+            osc_sender.send(beats)
 
-        if hasattr(args, 'record') and args.record:
-            Recorder(args.channels, args.samplerate, args.chunklength) \
+        if hasattr(args, 'device_number') and args.device_number != None:
+            Recorder(args.device_number, 2, analyser.sample_rate, analyser.chunk_length) \
                 .with_handle(handle) \
                 .run()
 
         elif hasattr(args, 'load') and args.load:
-            Loader(args.load, args.chunklength) \
+            Loader(args.load, args.chunk_length) \
                 .with_handle(handle) \
                 .run()
 
