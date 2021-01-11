@@ -31,7 +31,7 @@ def main():
     sub_parsers = arg_parser.add_subparsers()
 
     run_parser = sub_parsers.add_parser('detect')
-    run_parser.add_argument('--run', help='run beat detector', dest='run_detector', action='store_true', default=True)
+    run_parser.add_argument('--run', help='run rhythm detector', dest='run_detector', action='store_true', default=True)
     mode_group = run_parser.add_mutually_exclusive_group(required=True)
     mode_group.add_argument('--record', type=int, help='record from audio input device', dest='device_number')
     mode_group.add_argument('--load', help='load from local file specified by absolute os filepath')
