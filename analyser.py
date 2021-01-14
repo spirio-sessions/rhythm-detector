@@ -1,51 +1,32 @@
 from configparser import ConfigParser
+
 from numpy import sin, pi, mean, median, argmax
 
 class Analyser:
 
-    def __init__(self, sample_rate=44100, chunk_length=5.0, window_length=0.25, hop_length=0.05, dominant_window_length=0.5, dominant_hop_length=0.25, dominant_scale=1.0):
+    def __init__(self, sample_rate=44100, chunk_length=5.0, window_length=0.25, hop_length=0.05, dominant_window_length=0.5, dominant_hop_length=0.25, dominant_scale=1.0, analyser_config=None):
         self.sample_rate = sample_rate
-        self.chunk_length = chunk_length
-        self.chunk_size = int(sample_rate * chunk_length)
-        self.window_length = window_length
-        self.window_size = int(sample_rate * window_length)
-        self.hop_length = hop_length
-        self.hop_size = int(sample_rate * hop_length)
-        self.dominant_window_length = dominant_window_length
-        self.dominant_window_size = int(sample_rate * dominant_window_length) // self.hop_size
-        self.dominant_hop_length = dominant_hop_length
-        self.dominant_hop_size = int(sample_rate * dominant_hop_length) // self.hop_size
-        self.dominant_scale = dominant_scale
-
-    def with_config(self, config_path, profile=None):
-        cfg = ConfigParser()
-        cfg.read('analyser_config.ini')
-
-        if len(cfg.sections()) > 0:
-            if profile == None:
-                section = cfg[cfg.sections()[0]]
-            elif cfg.sections().__contains__(profile): 
-                section = cfg[profile]
-            else:
-                print('warning - analyser configuration could not be retrieved: no config profile named "%s" - continuing with defaults' % profile)
-                return self
-        else:
-            print('warning - analyser configuration could not be retrieved: no configuration found - continuing with defaults')
-            return self
         
-        self.sample_rate, = section.getint('SampleRate'),
-        self.chunk_length, = section.getfloat('ChunkLength'),
-        self.window_length, = section.getfloat('WindowLength'),
-        self.hop_length, = section.getfloat('HopLength'),
-        self.dominant_window_length, = section.getfloat('DominantWindowLength'),
-        self.dominant_hop_length, = section.getfloat('DominantHopLength'),
-        self.dominant_scale = section.getfloat('DominantScale')
+        if analyser_config != None:
+            self.chunk_length = analyser_config['chunk_length']
+            self.window_length = analyser_config['window_length']
+            self.hop_length = analyser_config['hop_length']
+            self.dominant_window_length = analyser_config['dominant_window_length']
+            self.dominant_hop_length = analyser_config['dominant_hop_length']
+            self.dominant_scale = analyser_config['dominant_scale']
+        else:
+            self.chunk_length = chunk_length
+            self.window_length = window_length
+            self.hop_length = hop_length
+            self.dominant_window_length = dominant_window_length
+            self.dominant_hop_length = dominant_hop_length
+            self.dominant_scale = dominant_scale
+
         self.chunk_size = int(self.sample_rate * self.chunk_length)
         self.window_size = int(self.sample_rate * self.window_length)
         self.hop_size = int(self.sample_rate * self.hop_length)
         self.dominant_window_size = int(self.sample_rate * self.dominant_window_length) // self.hop_size
-        self.dominant_hop_size = int(self.sample_rate * self.dominant_hop_length) // self.hop_size
-        return self
+        self.dominant_hop_size = int(self.sample_rate * self.dominant_hop_length) // self.hop_size    
 
     def detect(self, signal):
         def detect_window(window):

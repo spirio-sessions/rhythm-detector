@@ -38,4 +38,24 @@ for i in range(len(peak_signal)):
         pyplot.axvline(x=i*analyser.hop_length, color='r')
 
 pyplot.show()
+
+# %%
+import pyaudio
+
+pa = pyaudio.PyAudio()
+stream = pa.open(44100, 2, pyaudio.paInt16, input=True)
+
+data = stream.read(44100)
+print(len(data))
+print(type(data[0]))
+print(data[:16])
+
+print()
+
+data_int = []
+for i in range(0, len(data), 4):
+    data_int.append(int.from_bytes(data[i:i+4], 'little'))
+print(len(data_int))
+print(type(data_int[0]))
+print(data_int[:16])
 # %%

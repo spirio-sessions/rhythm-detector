@@ -14,6 +14,13 @@ class Loader:
         self.handle = callback
         return self
 
+    def get_sample_rate(self, file_path=None):
+        if file_path == None:
+            file_path = self.file_path
+
+        with wave.open(file_path, 'rb') as wf:
+            return wf.getframerate()
+
     def load(self, file_path=None, chunk_length=None):
         if file_path == None:
             file_path = self.file_path
