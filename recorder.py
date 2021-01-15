@@ -35,13 +35,13 @@ class Recorder:
         if device_number == None:
             device_number = self.device_number
         
-        return self.pa.get_device_info_by_index(device_number)['defaultSampleRate']
+        return int(self.pa.get_device_info_by_index(device_number)['defaultSampleRate'])
 
     def get_max_channels(self, device_number=None):
         if device_number == None:
             device_number = self.device_number
 
-        return self.pa.get_device_info_by_index(device_number)['maxInputChannels']
+        return int(self.pa.get_device_info_by_index(device_number)['maxInputChannels'])
 
     def record_chunk(self, device_number=None):
         if device_number == None:
