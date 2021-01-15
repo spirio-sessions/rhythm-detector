@@ -64,41 +64,50 @@ def get_analyser_config(config_path='analyser_config.ini', profile=None):
 def make_handle(analyser, osc_sender):
     return lambda chunk: osc_sender.send(analyser.analyse(chunk))  
 
+def run_recorder(device_number, analyser_config, osc_sender):
+    recorder = Recorder(device_number, analyser_config['chunk_length'])
+    sample_rate = recorder.get_sample_rate()
+    analyser = Analyser(sample_rate=sample_rate)            
+    handle = make_handle(analyser, osc_sender)
+    recorder.with_handle(handle).run()
+
+def run_loader(load_path, analyser_config, osc_sender):
+    loader = Loader(load_path, analyser_config['chunk_length'])
+    sample_rate = loader.get_sample_rate()
+    analyser = Analyser(sample_rate=sample_rate)
+    handle = make_handle(analyser, osc_sender)
+    loader.with_handle(handle).run()
+
+def list_devices():
+    pa = PyAudio()
+    device_count = pa.get_device_count()
+    for i in range(device_count):
+        print()
+        print(pa.get_device_info_by_index(i))
+    print()
+    pa.terminate()
+
 def main():
     args = get_cmd_args()
 
     if hasattr(args, 'run_detector') and args.run_detector:
 
+        analyser_config = get_analyser_config('analyser_config.ini', args.analyser_profile)
         target_connection = validate_connection_info(args.target)
         osc_sender = OscSender(target_connection)
-        analyser_config = get_analyser_config('analyser_config.ini', args.analyser_profile)
 
         if hasattr(args, 'device_number') and args.device_number != None:
-            recorder = Recorder(args.device_number, analyser_config['chunk_length'])
-            sample_rate = recorder.get_sample_rate()
-            analyser = Analyser(sample_rate=sample_rate)            
-            handle = make_handle(analyser, osc_sender)
-            recorder.with_handle(handle).run()
+            run_recorder(args.device_number, analyser_config, osc_sender)
 
         elif hasattr(args, 'load') and args.load:
-            loader = Loader(args.load, analyser_config['chunk_length'])
-            sample_rate = loader.get_sample_rate()
-            analyser = Analyser(sample_rate=sample_rate)
-            handle = make_handle(analyser, osc_sender)
-            loader.with_handle(handle).run()
+            run_loader(args.load, analyser_config, osc_sender)
 
         else:
             print('unknown error')
             exit(1)
 
     elif hasattr(args, 'list_devices') and args.list_devices:
-        pa = PyAudio()
-        device_count = pa.get_device_count()
-
-        for i in range(device_count):
-            print(pa.get_device_info_by_index(i))
-
-        pa.terminate()
+        list_devices()
 
     else:
         print('unknown error')
