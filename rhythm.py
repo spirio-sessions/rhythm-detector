@@ -54,27 +54,28 @@ def get_analyser_config(config_path='analyser_config.ini', profile=None):
             'chunk_length': section.getfloat('ChunkLength'),
             'window_length': section.getfloat('WindowLength'),
             'hop_length': section.getfloat('HopLength'),
-            'dominant_window_length': section.getfloat('DominantWindowLength'),
-            'dominant_hop_length': section.getfloat('DominantHopLength'),
-            'dominant_scale': section.getfloat('DominantScale')
+            'dominant_threshold': section.getfloat('DominantThreshold')
         }
 
         return config
 
 def make_handle(analyser, osc_sender):
-    return lambda chunk: osc_sender.send(analyser.analyse(chunk))  
+    def handle(chunk):
+        beats = analyser.analyse(chunk)
+        osc_sender.send(beats)
+    return handle
 
 def run_recorder(device_number, analyser_config, osc_sender):
     recorder = Recorder(device_number, analyser_config['chunk_length'])
     sample_rate = recorder.get_sample_rate()
-    analyser = Analyser(sample_rate=sample_rate)            
+    analyser = Analyser(sample_rate=sample_rate, analyser_config=analyser_config)
     handle = make_handle(analyser, osc_sender)
     recorder.with_handle(handle).run()
 
 def run_loader(load_path, analyser_config, osc_sender):
     loader = Loader(load_path, analyser_config['chunk_length'])
     sample_rate = loader.get_sample_rate()
-    analyser = Analyser(sample_rate=sample_rate)
+    analyser = Analyser(sample_rate=sample_rate, analyser_config=analyser_config)
     handle = make_handle(analyser, osc_sender)
     loader.with_handle(handle).run()
 
