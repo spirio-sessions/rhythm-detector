@@ -1,61 +1,45 @@
 #%%
-import wave
 from matplotlib import pyplot
-from numpy import empty, concatenate, mean, sin, pi
 
-from util import read_chunk
-from recorder import Recorder
 from loader import Loader
-from pyaudio import paInt16
 from analyser import Analyser
 
+loader = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_1.wav', 0)
+signal = loader.load(chunk_length=5.0)
+# loader = Loader('./recording.wav', 0)
+# signal = loader.load(chunk_length=2.0)
+# timestamps_raw = [ i/loader.get_sample_rate() for i in range(len(signal)) ]
 
-#%%
-sample_rate = 48000
-window_length = 0.020 #s
-hop_length = 0.1 #s
+# pyplot.figure(figsize=(20,5))
+# pyplot.plot(timestamps_raw, signal, '.')
+# pyplot.show()
 
-signal = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_1.wav', 0).load()
-analyser = Analyser( \
-    sample_rate=48000,\
-    chunk_length=5.0,\
-    window_length=0.25,\
-    hop_length=0.05,\
-    dominant_window_length=0.5,\
-    dominant_hop_length=0.25,\
-    dominant_scale=1.0 \
-    )
-detection_signal = analyser.detect(signal)
+analyser = Analyser(sample_rate=loader.get_sample_rate(), chunk_length=2.0)
+
+smoothed_signal = analyser.smooth(signal)
+detection_signal = analyser.detect(smoothed_signal)
 peak_signal = analyser.peak_pick(detection_signal)
 
-timestamps = [ i*analyser.hop_length for i in range(len(detection_signal))]
+timestamps = [ i*analyser.hop_length for i in range(len(smoothed_signal))]
 
-pyplot.figure(figsize=(30,4))
-pyplot.plot(timestamps, detection_signal)
+# pyplot.figure(figsize=(20,5))
+# pyplot.plot(timestamps, smoothed_signal)
+# pyplot.ylim(2.5e8, 6.0e8)
+# pyplot.show()
 
-for i in range(len(peak_signal)):
-    if peak_signal[i] > 0.0:
-        pyplot.axvline(x=i*analyser.hop_length, color='r')
+# pyplot.figure(figsize=(20,5))
+# pyplot.plot(timestamps, detection_signal)
+# pyplot.ylim(-0.5e8, 0.5e8)
+# pyplot.show()
 
+pyplot.figure(figsize=(20,5))
+pyplot.plot(timestamps, peak_signal, 'hr')
+pyplot.ylim(0.5, 1.5)
 pyplot.show()
 
-# %%
-import pyaudio
+# beats = analyser.analyse(signal)
+# for timestamp, _ in beats:
+#     pyplot.axvline(x=timestamp, color='r')
+# pyplot.show()
 
-pa = pyaudio.PyAudio()
-stream = pa.open(44100, 2, pyaudio.paInt16, input=True)
-
-data = stream.read(44100)
-print(len(data))
-print(type(data[0]))
-print(data[:16])
-
-print()
-
-data_int = []
-for i in range(0, len(data), 4):
-    data_int.append(int.from_bytes(data[i:i+4], 'little'))
-print(len(data_int))
-print(type(data_int[0]))
-print(data_int[:16])
-# %%
+#%%

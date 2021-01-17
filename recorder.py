@@ -27,8 +27,8 @@ class Recorder:
         return self
 
     def on_raw_chunk_recorded(self, raw_chunk):
-        unit_size = self.pa.get_sample_size(paInt16) * self.channels
-        chunk = read_chunk(unit_size, raw_chunk)
+        unit_size = self.pa.get_sample_size(paInt16)
+        chunk = read_chunk(unit_size, self.channels, raw_chunk)
         self.handle(chunk)
 
     def get_sample_rate(self, device_number=None):

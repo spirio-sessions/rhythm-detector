@@ -28,23 +28,19 @@ class Loader:
         with wave.open(file_path, 'rb') as wf:
             
             if chunk_length == None: # read all
-                raw_chunk = wf.readframes(1024)
-                raw_chunks = [raw_chunk]
-
-                while raw_chunk != b'':
-                    raw_chunk = wf.readframes(1024)
-                    raw_chunks.append(raw_chunk)
-
-                data = b''.join(raw_chunks)
-                unit_size  = wf.getsampwidth()
-                return read_chunk(unit_size, data)
+                total_frames = wf.getnframes()
+                raw_chunk = wf.readframes(total_frames)
+                unit_size = wf.getsampwidth()
+                n_channels = wf.getnchannels()
+                return read_chunk(unit_size, n_channels, raw_chunk)
 
             else: # read specified chunk
                 frame_rate = wf.getframerate()
                 chunk_size = int(chunk_length * frame_rate)
-                unit_size  = wf.getsampwidth()
+                unit_size = wf.getsampwidth()
+                n_channels = wf.getnchannels()
                 raw_chunk = wf.readframes(chunk_size)
-                return read_chunk(unit_size, raw_chunk)
+                return read_chunk(unit_size, n_channels, raw_chunk)
 
     def run(self):
         with wave.open(self.file_path, 'rb') as wf:
@@ -57,7 +53,7 @@ class Loader:
             raw_chunk = wf.readframes(chunk_size)
 
             while raw_chunk != b'':
-                chunk = read_chunk(unit_size, raw_chunk)
+                chunk = read_chunk(unit_size, wf.getnchannels, raw_chunk)
                 self.handle(chunk)
                 raw_chunk = wf.readframes(chunk_size)
 
