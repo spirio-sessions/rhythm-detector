@@ -56,16 +56,16 @@ class Analyser:
             peak_signal[i] = 1 if m > self.dominant_threshold and l < m and m >= r else 0
         return peak_signal
 
-    def peaks_to_timestamps(self, signal):
+    def peaks_to_timestamps(self, peak_signal):
         timestamps = []
 
-        for i in range(len(signal)):
-            if signal[i] != 0.0:
+        for i in range(len(peak_signal)):
+            if peak_signal[i] != 0.0:
                 timestamp = i * self.hop_length
-                amplitude = signal[i]
+                amplitude = peak_signal[i]
                 timestamps.append((timestamp, amplitude))
         
-        return timestamps
+        return timestamps[1:] # drop first peak because it caused by signal smoothing
 
     def analyse(self, signal):
         smoothed_signal = self.smooth(signal)
