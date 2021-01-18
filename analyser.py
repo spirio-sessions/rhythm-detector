@@ -1,6 +1,4 @@
-from configparser import ConfigParser
-
-from numpy import abs, sin, pi, mean, median, argmax
+from numpy import sin, pi, mean
 
 class Analyser:
 
