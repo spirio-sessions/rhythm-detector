@@ -1,5 +1,6 @@
 import wave
 from concurrent.futures import ThreadPoolExecutor
+from os import _exit, EX_OK
 
 from numpy import empty
 from pyaudio import PyAudio, paInt16
@@ -71,19 +72,24 @@ class Recorder:
             input=True,
             frames_per_buffer=1024)
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            print('beat detector is recording..')
-            running = True
-            while running:
-                try:
-                    raw_chunk = self.stream.read(self.chunk_size, False)
-                    executor.submit(self.on_raw_chunk_recorded, raw_chunk)
-                except KeyboardInterrupt:
-                    running = False
-    
+        executor = ThreadPoolExecutor(max_workers=2)
+        print('beat detector is recording..')
+        running = True
+        while running:
+            try:
+                raw_chunk = self.stream.read(self.chunk_size, False)
+                future = executor.submit(self.on_raw_chunk_recorded, raw_chunk)
+            except KeyboardInterrupt:
+                running = False
+                future.cancel()
+
+        executor.shutdown(wait=False)
+
         self.stream.stop_stream()
         self.stream.close()
         self.pa.terminate()
         
         print()
         print('beat detector stopped recording - good bye')
+
+        _exit(EX_OK)
