@@ -12,6 +12,8 @@ class OscSender:
         data = None
         last_timestamp = 0.0
 
+        print(beats)
+
         for timestamp, _ in beats:
             delay = timestamp - last_timestamp
             sleep(delay)

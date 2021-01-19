@@ -42,4 +42,14 @@ for timestamp, _ in beats:
     pyplot.axvline(x=timestamp, color='r')
 pyplot.show()
 
-#%%
+# %%
+from loader import Loader
+from analyser import Analyser
+
+loader = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_1.wav', 0)
+signal = loader.load(chunk_length=2.5)
+
+analyser = Analyser(sample_rate=loader.get_sample_rate(), chunk_length=2.5)
+dominants = analyser.analyse(signal)
+print(dominants)
+# %%

@@ -20,22 +20,22 @@ class Analyser:
         self.window_size = int(self.sample_rate * self.window_length)
         self.hop_size = int(self.sample_rate * self.hop_length)   
 
-    def smooth(self, signal):
-        def smooth_window(window):
-            if len(window) > 0:
-                smoothed = [0.0] * len(window)
-                for i in range(len(window)):
-                    smoothed[i] = window[i]**2 * sin(pi*i/len(window))**2
-                return mean(smoothed)
-            else:
-                return 0.0
+    def smooth_window(self, window):
+        if len(window) > 0:
+            smoothed = [0.0] * len(window)
+            for i in range(len(window)):
+                smoothed[i] = window[i]**2 * sin(pi*i/len(window))**2
+            return mean(smoothed)
+        else:
+            return 0.0
 
+    def smooth(self, signal):
         smoothed_signal = [0.0] * (len(signal) // self.hop_size)
 
         for i in range(self.hop_size, len(signal), self.hop_size):
             if i-(self.window_size//2) > len(signal) or i+(self.window_size//2) > len(signal):
                 continue
-            smoothed_signal[(i//self.hop_size)-1] = smooth_window(signal[i-(self.window_size//2) : i+(self.window_size//2)-1])
+            smoothed_signal[(i//self.hop_size)-1] = self.smooth_window(signal[i-(self.window_size//2) : i+(self.window_size//2)-1])
 
         return smoothed_signal
 
@@ -51,7 +51,7 @@ class Analyser:
             l = detection_signal[i-1]
             m = detection_signal[i]
             r = detection_signal[i+1]
-            peak_signal[i] = 1 if m > self.dominant_threshold and l < m and m >= r else 0
+            peak_signal[i] = m if m > self.dominant_threshold and l < m and m >= r else 0
         return peak_signal
 
     def peaks_to_timestamps(self, peak_signal):
@@ -66,7 +66,38 @@ class Analyser:
         return timestamps[1:] # drop first peak because it caused by signal smoothing
 
     def analyse(self, signal):
-        smoothed_signal = self.smooth(signal)
-        detection_signal = self.detect(smoothed_signal)
-        peak_signal = self.peak_pick(detection_signal)
-        return self.peaks_to_timestamps(peak_signal)
+        h = self.hop_size
+        w = self.window_size
+
+        l  = self.smooth_window(signal[h-(w//2) : h+self.hop_size+(w//2)-1])
+        h += self.hop_size
+        ml = self.smooth_window(signal[h-(w//2) : h+self.hop_size+(w//2)-1])
+        h += self.hop_size
+        mr = self.smooth_window(signal[h-(w//2) : h+self.hop_size+(w//2)-1])
+        h += self.hop_size
+        r  = self.smooth_window(signal[h-(w//2) : h+self.hop_size+(w//2)-1])
+
+        h *= 4
+
+        dl = ml - l
+        dm = mr - ml
+        dr = r - mr
+
+        dominants = []
+
+        while h < len(signal) - w//2:
+
+            if dm > self.dominant_threshold and dl < dm and dm >= dr:
+                t = (h//self.hop_size - 1) * self.hop_length
+                dominants.append((t, dm))
+
+            h += self.hop_size
+
+            mr = r
+            r  = self.smooth_window(signal[h-(w//2) : h+self.hop_size+(w//2)-1])
+
+            dl = dm
+            dm = dr
+            dr = r - mr
+
+        return dominants[1:] if len(dominants) > 1 else []
