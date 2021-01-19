@@ -53,7 +53,7 @@ class Loader:
             raw_chunk = wf.readframes(chunk_size)
 
             while raw_chunk != b'':
-                chunk = read_chunk(unit_size, wf.getnchannels, raw_chunk)
+                chunk = read_chunk(unit_size, wf.getnchannels(), raw_chunk)
                 self.handle(chunk)
                 raw_chunk = wf.readframes(chunk_size)
 
