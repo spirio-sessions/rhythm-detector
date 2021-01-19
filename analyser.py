@@ -77,8 +77,6 @@ class Analyser:
         h += self.hop_size
         r  = self.smooth_window(signal[h-(w//2) : h+self.hop_size+(w//2)-1])
 
-        h *= 4
-
         dl = ml - l
         dm = mr - ml
         dr = r - mr
