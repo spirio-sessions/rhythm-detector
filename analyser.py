@@ -63,7 +63,7 @@ class Analyser:
                 amplitude = peak_signal[i]
                 timestamps.append((timestamp, amplitude))
         
-        return timestamps[1:] # drop first peak because it caused by signal smoothing
+        return timestamps[1:] # drop first peak because it is caused by signal smoothing
 
     def analyse(self, signal):
         h = self.hop_size
@@ -86,7 +86,7 @@ class Analyser:
         while h < len(signal) - w//2:
 
             if dm > self.dominant_threshold and dl < dm and dm >= dr:
-                t = (h//self.hop_size - 1) * self.hop_length
+                t = (h//self.hop_size - 2) * self.hop_length
                 dominants.append((t, dm))
 
             h += self.hop_size
@@ -98,4 +98,4 @@ class Analyser:
             dm = dr
             dr = r - mr
 
-        return dominants[1:] if len(dominants) > 1 else []
+        return dominants[1:] # drop first peak because it is caused by signal smoothing
