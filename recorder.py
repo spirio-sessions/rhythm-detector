@@ -1,5 +1,5 @@
 import wave
-from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
 
 from numpy import empty
 from pyaudio import PyAudio, paInt16
@@ -63,23 +63,27 @@ class Recorder:
         wf.close()
 
     def run(self):
-        try:
-            self.stream = self.pa.open(
-                input_device_index=self.device_number,
-                rate=self.sample_rate, 
-                channels=self.channels,
-                format=paInt16,
-                input=True,
-                frames_per_buffer=1024)
+        self.stream = self.pa.open(
+            input_device_index=self.device_number,
+            rate=self.sample_rate, 
+            channels=self.channels,
+            format=paInt16,
+            input=True,
+            frames_per_buffer=1024)
 
+        with ThreadPoolExecutor(max_workers=2) as executor:
             print('beat detector is recording..')
-
-            while True:
-                raw_chunk = self.stream.read(self.chunk_size, False)
-                Thread(target=self.on_raw_chunk_recorded, args=(raw_chunk,)).start()
-                
-        except KeyboardInterrupt:
-            print('beat detector stopped recording - good bye')
-            self.stream.stop_stream()
-            self.stream.close()
-            self.pa.terminate()
+            running = True
+            while running:
+                try:
+                    raw_chunk = self.stream.read(self.chunk_size, False)
+                    executor.submit(self.on_raw_chunk_recorded, raw_chunk)
+                except KeyboardInterrupt:
+                    running = False
+    
+        self.stream.stop_stream()
+        self.stream.close()
+        self.pa.terminate()
+        
+        print()
+        print('beat detector stopped recording - good bye')
