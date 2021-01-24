@@ -5,7 +5,7 @@ from loader import Loader
 from analyser import Analyser
 
 chunk_length = 10.0
-loader = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_2.wav', 0)
+loader = Loader('/Users/xmaek/Music/Music/Media.localized/Unknown Artist/Unknown Album/Sax_1.wav', 0)
 signal = loader.load(chunk_length=chunk_length)
 # loader = Loader('./recording.wav', 0)
 # signal = loader.load(chunk_length=chunk_length)
@@ -30,11 +30,11 @@ timestamps = [ i*analyser.hop_length for i in range(len(smoothed_signal))]
 pyplot.figure(figsize=(20,5))
 pyplot.plot(timestamps, smoothed_signal)
 pyplot.ylim(2.5e8, 6.0e8)
-pyplot.show()
+# pyplot.show()
 
-pyplot.figure(figsize=(20,5))
-pyplot.plot(timestamps, detection_signal)
-pyplot.ylim(-0.5e8, 0.5e8)
+# pyplot.figure(figsize=(20,5))
+# pyplot.plot(timestamps, detection_signal)
+# pyplot.ylim(-0.5e8, 0.5e8)
 # pyplot.show()
 
 # pyplot.figure(figsize=(20,5))

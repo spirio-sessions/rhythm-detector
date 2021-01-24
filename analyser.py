@@ -45,25 +45,23 @@ class Analyser:
             detection_signal[i] = smoothed_signal[i] - smoothed_signal[i-1]
         return detection_signal
 
-    def peak_pick(self, detection_signal):
+    def peak_pick(self, detection_signal, drop_first=True):
         peak_signal = [0] * len(detection_signal)
         for i in range(1, len(detection_signal) - 1):
             l = detection_signal[i-1]
             m = detection_signal[i]
             r = detection_signal[i+1]
             peak_signal[i] = m if m > self.dominant_threshold and l < m and m >= r else 0
-        return peak_signal
+        return peak_signal[1:] if drop_first else peak_signal
 
     def peaks_to_timestamps(self, peak_signal):
         timestamps = []
-
         for i in range(len(peak_signal)):
             if peak_signal[i] != 0.0:
                 timestamp = i * self.hop_length
                 amplitude = peak_signal[i]
-                timestamps.append((timestamp, amplitude))
-        
-        return timestamps[1:] # drop first peak because it is caused by signal smoothing
+                timestamps.append((timestamp, amplitude))      
+        return timestamps
 
     def analyse(self, signal):
         h = self.hop_size
@@ -87,7 +85,7 @@ class Analyser:
 
             if dm > self.dominant_threshold and dl < dm and dm >= dr:
                 t = (h//self.hop_size - 2) * self.hop_length
-                dominants.append((t, dm))
+                dominants.append((t, mr))
 
             h += self.hop_size
 
