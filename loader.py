@@ -1,6 +1,5 @@
 import wave
 
-from numpy import empty
 from util import read_chunk
 
 class Loader:
@@ -58,5 +57,3 @@ class Loader:
                 raw_chunk = wf.readframes(chunk_size)
 
             print('beat detector processed wav')
-
-            
