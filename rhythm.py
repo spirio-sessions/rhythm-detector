@@ -7,7 +7,7 @@ from configparser import ConfigParser
 from pyaudio import PyAudio
 
 from osc_sender import OscSender
-from analyser import Analyser
+from analyser import Analyser, get_analyser_config
 from recorder import Recorder
 from loader import Loader
 
@@ -35,29 +35,6 @@ def validate_connection_info(target_string):
         return (ip, int(port))
     else:
         raise ValueError("specification of target connection malformed; expected 'IPV4:PORT' but instead got %s" % target_string)
-
-def get_analyser_config(config_path='analyser_config.ini', profile=None):
-        cfg = ConfigParser(allow_no_value=True)
-        cfg.read(config_path)
-
-        if len(cfg.sections()) > 0:
-            if profile == None:
-                section = cfg[cfg.sections()[0]]
-            elif cfg.sections().__contains__(profile): 
-                section = cfg[profile]
-            else:
-                raise ValueError('analyser configuration could not be retrieved: no config profile named "%s"' % profile)
-        else:
-            raise ValueError('analyser configuration could not be retrieved: no configuration found in config file "%s"' % config_path)
-        
-        config = {
-            'chunk_length': section.getfloat('ChunkLength'),
-            'window_length': section.getfloat('WindowLength'),
-            'hop_length': section.getfloat('HopLength'),
-            'dominant_threshold': section.getfloat('DominantThreshold')
-        }
-
-        return config
 
 def make_handle(analyser, osc_sender):
     def handle(chunk):

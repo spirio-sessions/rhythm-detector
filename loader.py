@@ -4,7 +4,7 @@ from util import read_chunk
 
 class Loader:
 
-    def __init__(self, file_path, chunk_length):
+    def __init__(self, file_path, chunk_length=None):
         self.file_path = file_path
         self.chunk_length = chunk_length
         self.handle = lambda _: print('no callback specified ...')

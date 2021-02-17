@@ -1,4 +1,29 @@
+from configparser import ConfigParser
+
 from numpy import sin, pi, mean
+
+def get_analyser_config(config_path='analyser_config.ini', profile=None):
+        cfg = ConfigParser(allow_no_value=True)
+        cfg.read(config_path)
+
+        if len(cfg.sections()) > 0:
+            if profile == None:
+                section = cfg[cfg.sections()[0]]
+            elif cfg.sections().__contains__(profile): 
+                section = cfg[profile]
+            else:
+                raise ValueError('analyser configuration could not be retrieved: no config profile named "%s"' % profile)
+        else:
+            raise ValueError('analyser configuration could not be retrieved: no configuration found in config file "%s"' % config_path)
+        
+        config = {
+            'chunk_length': section.getfloat('ChunkLength'),
+            'window_length': section.getfloat('WindowLength'),
+            'hop_length': section.getfloat('HopLength'),
+            'dominant_threshold': section.getfloat('DominantThreshold')
+        }
+
+        return config
 
 class Analyser:
 
@@ -31,12 +56,10 @@ class Analyser:
 
     def smooth(self, signal):
         smoothed_signal = [0.0] * (len(signal) // self.hop_size)
-
         for i in range(self.hop_size, len(signal), self.hop_size):
             if i-(self.window_size//2) > len(signal) or i+(self.window_size//2) > len(signal):
                 continue
             smoothed_signal[(i//self.hop_size)-1] = self.smooth_window(signal[i-(self.window_size//2) : i+(self.window_size//2)-1])
-
         return smoothed_signal
 
     def detect(self, smoothed_signal):
@@ -45,14 +68,18 @@ class Analyser:
             detection_signal[i] = smoothed_signal[i] - smoothed_signal[i-1]
         return detection_signal
 
-    def peak_pick(self, detection_signal, drop_first=True):
+    def peak_pick(self, detection_signal):
+        isFirstDominant = True
         peak_signal = [0] * len(detection_signal)
         for i in range(1, len(detection_signal) - 1):
             l = detection_signal[i-1]
             m = detection_signal[i]
             r = detection_signal[i+1]
-            peak_signal[i] = m if m > self.dominant_threshold and l < m and m >= r else 0
-        return peak_signal[1:] if drop_first else peak_signal
+            if m > self.dominant_threshold and l < m and m >= r:
+                if not isFirstDominant:
+                    peak_signal[i] = m
+                isFirstDominant = False
+        return peak_signal
 
     def peaks_to_timestamps(self, peak_signal):
         timestamps = []
@@ -79,13 +106,18 @@ class Analyser:
         dm = mr - ml
         dr = r - mr
 
+        isFirstDominant = True
         dominants = []
 
         while h < len(signal) - w//2:
 
+            # check for dominant ..
             if dm > self.dominant_threshold and dl < dm and dm >= dr:
-                t = (h//self.hop_size - 2) * self.hop_length
-                dominants.append((t, mr))
+                # .. and drop first peak because it is caused by signal smoothing
+                if not isFirstDominant:
+                    t = (h//self.hop_size - 2) * self.hop_length
+                    dominants.append((t, mr))
+                isFirstDominant = False
 
             h += self.hop_size
 
@@ -96,4 +128,4 @@ class Analyser:
             dm = dr
             dr = r - mr
 
-        return dominants[1:] # drop first peak because it is caused by signal smoothing
+        return dominants
